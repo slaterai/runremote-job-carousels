@@ -1,0 +1,30 @@
+name: Render job carousels
+on:
+  push:
+    paths: ['jobs/*.json', 'render.py', '.github/workflows/render.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: render
+  cancel-in-progress: false
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install renderer
+        run: |
+          pip install playwright==1.47.0 pillow
+          python -m playwright install --with-deps chromium
+      - name: Render new carousels
+        run: python render.py .
+      - name: Commit slides
+        run: |
+          git config user.name "carousel-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add slides
+          git diff --cached --quiet || (git commit -m "Render slides" && git pull --rebase && git push)
